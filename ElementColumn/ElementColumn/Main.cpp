@@ -61,18 +61,22 @@ GLfloat vBlack[] = { 0.0f, 0.0f, 0.0f, 1.0f };
 // 跟踪效果步骤
 int nStep = 0;
 
-
-
-// 此函数在呈现上下文中进行任何必要的初始化。.
-// 这是第一次做任何与opengl相关的任务。
+/*
+ 此函数在呈现上下文中进行任何必要的初始化
+ 这是第一次做任何与opengl相关的任务。
+ */
 void SetupRC()
 {
     // 灰色的背景
     glClearColor(0.7f, 0.7f, 0.7f, 1.0f );
     shaderManager.InitializeStockShaders();
     glEnable(GL_DEPTH_TEST);
+    
     //设置变换管线以使用两个矩阵堆栈
+    //投影变换(矩阵) 移动变换(矩阵) --> 变化管道 --> 快速矩阵相乘 --> 遍历
     transformPipeline.SetMatrixStacks(modelViewMatrix, projectionMatrix);
+    
+    /*观察者的位置*/
     cameraFrame.MoveForward(-15.0f);
     
     /*
@@ -93,7 +97,9 @@ void SetupRC()
     //定义一些点，三角形形状。
    
     GLfloat vCoast[9] = {
-        3,3,0,0,3,0,3,0,0
+        4,4,0,
+        0,4,0,
+        4,0,0
         
     };
     
@@ -246,7 +252,6 @@ void SetupRC()
 }
 
 
-
 void DrawWireFramedBatch(GLBatch* pBatch)
 {
     /*------------画绿色部分----------------*/
@@ -308,18 +313,15 @@ void DrawWireFramedBatch(GLBatch* pBatch)
     glDisable(GL_BLEND);
     glDisable(GL_LINE_SMOOTH);
     
-    
 }
 
-
-
-// 召唤场景
+#pragma mark - 召唤场景绘制
 void RenderScene(void)
 {
     // Clear the window with current clearing color
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
    
-    //压栈
+    //压栈,记录状态，回退
     modelViewMatrix.PushMatrix();
     M3DMatrix44f mCamera;
     cameraFrame.GetCameraMatrix(mCamera);
@@ -384,34 +386,36 @@ void RenderScene(void)
     glutSwapBuffers();
 }
 
-
-//特殊键位处理（上、下、左、右移动）
+#pragma mark - 特殊键位处理（上、下、左、右移动）
 void SpecialKeys(int key, int x, int y)
 {
-    
+    //objectFrame来记录当前物体旋转多少应用到物体的变化上
+    //往上转，围绕x轴
     if(key == GLUT_KEY_UP)
         //围绕一个指定的X,Y,Z轴旋转。
+        //m3dDegToRad度数转弧度
         objectFrame.RotateWorld(m3dDegToRad(-5.0f), 1.0f, 0.0f, 0.0f);
     
+    //往下转，围绕x轴
     if(key == GLUT_KEY_DOWN)
         objectFrame.RotateWorld(m3dDegToRad(5.0f), 1.0f, 0.0f, 0.0f);
     
+    //往左转围，绕y轴
     if(key == GLUT_KEY_LEFT)
         objectFrame.RotateWorld(m3dDegToRad(-5.0f), 0.0f, 1.0f, 0.0f);
     
+    //往右转，绕y轴
     if(key == GLUT_KEY_RIGHT)
         objectFrame.RotateWorld(m3dDegToRad(5.0f), 0.0f, 1.0f, 0.0f);
     
-    glutPostRedisplay();
+    glutPostRedisplay();//触发重新渲染
 }
 
 
-
-
-//根据空格次数。切换不同的“窗口名称”
-void KeyPressFunc(unsigned char key, int x, int y)
+#pragma mark - 根据空格次数。切换不同的“窗口名称,对应不同的图形
+void ECKeyPressFunc(unsigned char key, int x, int y)
 {
-    if(key == 32)
+    if(key == 32) //空格对应的ASCII 32
     {
         nStep++;
         
@@ -450,14 +454,14 @@ void KeyPressFunc(unsigned char key, int x, int y)
 
 // 窗口已更改大小，或刚刚创建。无论哪种情况，我们都需要
 // 使用窗口维度设置视口和投影矩阵.
-void ChangeSize(int w, int h)
+void ECChangeSize(int w, int h)
 {
     glViewport(0, 0, w, h);
     //创建投影矩阵，并将它载入投影矩阵堆栈中
     viewFrustum.SetPerspective(35.0f, float(w) / float(h), 1.0f, 500.0f);
     projectionMatrix.LoadMatrix(viewFrustum.GetProjectionMatrix());
     
-    //调用顶部载入单元矩阵
+    //调用顶部载入单元矩阵，对角线为1，其他为0
     modelViewMatrix.LoadIdentity();
 }
 
@@ -466,18 +470,25 @@ int main(int argc, char* argv[])
 {
     gltSetWorkingDirectory(argv[0]);
     glutInit(&argc, argv);
+    
     //申请一个颜色缓存区、深度缓存区、双缓存区、模板缓存区
     glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA | GLUT_DEPTH | GLUT_STENCIL);
+    
     //设置window 的尺寸
     glutInitWindowSize(800, 600);
+    
     //创建window的名称
     glutCreateWindow("GL_POINTS");
+    
     //注册回调函数（改变尺寸）
-    glutReshapeFunc(ChangeSize);
+    glutReshapeFunc(ECChangeSize);
+    
     //点击空格时，调用的函数
-    glutKeyboardFunc(KeyPressFunc);
+    glutKeyboardFunc(ECKeyPressFunc);
+    
     //特殊键位函数（上下左右）
     glutSpecialFunc(SpecialKeys);
+    
     //显示函数
     glutDisplayFunc(RenderScene);
     
