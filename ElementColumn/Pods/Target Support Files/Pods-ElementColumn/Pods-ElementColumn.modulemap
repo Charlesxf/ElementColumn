@@ -1,0 +1,6 @@
+framework module Pods_ElementColumn {
+  umbrella header "Pods-ElementColumn-umbrella.h"
+
+  export *
+  module * { export * }
+}
